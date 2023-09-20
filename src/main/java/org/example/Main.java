@@ -5,24 +5,35 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
 public class Main {
     public static void main(String[] args) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode rootNode = objectMapper.readTree(new File("data.json"));
 
-            // Access JSON data as needed
-            String firstName = rootNode.get("firstName").asText();
-            String lastName = rootNode.get("lastName").asText();
-            int age = rootNode.get("age").asInt();
+            String jdbcUrl = "jdbc:mysql://localhost:3306/iosb_db";
+            String username = "IOSB";
+            String password = "Frosted-Barrette4-Revisable";
 
-            System.out.println("First Name: " + firstName);
-            System.out.println("Last Name: " + lastName);
-            System.out.println("Age: " + age);
+            Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+            String sql = "INSERT INTO user (firstName, lastName, age) VALUES (?, ?, ?)";
+            PreparedStatement preparedStatement = connection.prepareStatement(sql);
 
-            // Further processing of the data or storing it in a database
+            preparedStatement.setString(1, rootNode.get("firstName").asText());
+            preparedStatement.setString(2, rootNode.get("lastName").asText());
+            preparedStatement.setInt(3, rootNode.get("age").asInt());
+
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 }
