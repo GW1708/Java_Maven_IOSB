@@ -10,6 +10,8 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+import static java.sql.DriverManager.println;
+
 public class Main {
     public static void main(String[] args) {
         try {
@@ -21,12 +23,13 @@ public class Main {
             String password = "Frosted-Barrette4-Revisable";
 
             Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
-            String sql = "INSERT INTO user (firstName, lastName, age) VALUES (?, ?, ?)";
+            String sql = "INSERT INTO address (streetAddress, city, state, postalCode) VALUES (?, ?, ?, ?)";
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
 
-            preparedStatement.setString(1, rootNode.get("firstName").asText());
-            preparedStatement.setString(2, rootNode.get("lastName").asText());
-            preparedStatement.setInt(3, rootNode.get("age").asInt());
+            preparedStatement.setString(1, rootNode.get("address").get("streetAddress").asText());
+            preparedStatement.setString(2, rootNode.get("address").get("city").asText());
+            preparedStatement.setString(3, rootNode.get("address").get("state").asText());
+            preparedStatement.setInt(4, rootNode.get("address").get("postalCode").asInt());
 
             preparedStatement.executeUpdate();
 
