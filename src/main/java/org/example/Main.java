@@ -5,58 +5,99 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 
 
 public class Main {
     public static void main(String[] args) {
 
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(new File("data.json"));
-
             String jdbcUrl = "jdbc:mysql://localhost:3306/iosb_db";
             String username = "IOSB";
             String password = "Frosted-Barrette4-Revisable";
 
             Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
 
-            write_data(connection, rootNode);
+            // write_data(connection, rootNode);
+            String sql_query = "SELECT * FROM user";  // Refactor this to take user input
+            print_data(connection, sql_query);
 
-        } catch (SQLException | IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static void write_data(Connection connection, JsonNode rootNode) {
-        // check if address already exists. If not write address data
-        write_address_data(connection, rootNode.get("address"));
-        Integer address_id = 1;  // Rewrite using a reading method
-        write_user_data(connection, rootNode.get("user"), address_id);
-        Integer user_id = 1;  // Rewrite using a reading method
-        write_phone_data(connection, rootNode.get("phoneNumber"), user_id);
-    }
-
-    public static void write_address_data(Connection connection, JsonNode address_node) {
-        try {
-            String sql = "INSERT INTO address (streetAddress, city, state, postalCode) VALUES (?, ?, ?, ?)";
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
-
-            preparedStatement.setString(1, address_node.get("streetAddress").asText());
-            preparedStatement.setString(2, address_node.get("city").asText());
-            preparedStatement.setString(3, address_node.get("state").asText());
-            preparedStatement.setInt(4, address_node.get("postalCode").asInt());
-
-            preparedStatement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static void write_user_data(Connection connection, JsonNode rootNode, Integer address_id ) {
+    private static void print_data(Connection connection, String sqlQuery) {
+
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlQuery);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            ResultSetMetaData metaData = resultSet.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            while (resultSet.next()) {
+                for (int i = 1; i <= columnCount; i++) {
+                    String columnName = metaData.getColumnName(i);
+                    String columnValue = resultSet.getString(i);
+                    System.out.println(columnName + ": " + columnValue);
+                }
+                System.out.println();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void write_data(Connection connection) {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        try {
+            JsonNode rootNode = objectMapper.readTree(new File("data.json"));
+
+            // todo: check if address already exists. If not write address data
+            int address_id = write_address_data(connection, rootNode.get("address"));
+            System.out.println("Writing address data successful. Primary Key: " + address_id);
+            int user_id = write_user_data(connection, rootNode, address_id);
+            System.out.println("Writing user data successful. Primary Key: " + user_id);
+            int phone_id = write_phone_data(connection, rootNode.get("phoneNumber"), user_id);
+            System.out.println("Writing phone data successful. Primary Key: " + phone_id);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static int write_address_data(Connection connection, JsonNode address_node) {
+        try {
+            String sql = "INSERT INTO address (streetAddress, city, state, postalCode) VALUES (?, ?, ?, ?)";
+            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+
+            String streetAddress = address_node.get("streetAddress").asText();
+            String city = address_node.get("city").asText();
+            String state = address_node.get("state").asText();
+            int postalCode = address_node.get("postalCode").asInt();
+
+            preparedStatement.setString(1, streetAddress);
+            preparedStatement.setString(2, city);
+            preparedStatement.setString(3, state);
+            preparedStatement.setInt(4, postalCode);
+
+            preparedStatement.executeUpdate();
+
+            ResultSet generatedKeys = preparedStatement.getGeneratedKeys();
+
+            if (generatedKeys.next()) {
+                return generatedKeys.getInt(1);
+            } else {
+                throw new SQLException("No generated keys returned.");
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static int write_user_data(Connection connection, JsonNode rootNode, int address_id ) {
         try {
             String sql = "INSERT INTO user (firstName, lastName, age, address_id) VALUES (?, ?, ?, ?)";
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
@@ -68,26 +109,39 @@ public class Main {
 
             preparedStatement.executeUpdate();
 
+            ResultSet generatedKeys = preparedStatement.getGeneratedKeys();
+
+            if (generatedKeys.next()) {
+                return generatedKeys.getInt(1);
+            } else {
+                throw new SQLException("No generated keys returned.");
+            }
+
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static void write_phone_data(Connection connection, JsonNode phone_node, Integer user_id) {
+    private static int write_phone_data(Connection connection, JsonNode phone_node, int user_id) {
         try {
             String sql = "INSERT INTO phone (type, number, user_id) VALUES (?, ?, ?)";
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
 
-            // Refactor to loop over all phone entries instead
+            // todo: Refactor to loop over all existing phone entries
             preparedStatement.setString(1, phone_node.get(0).get("type").asText());
             preparedStatement.setString(2, phone_node.get(0).get("number").asText());
             preparedStatement.setInt(3, user_id);
 
-            preparedStatement.setString(1, phone_node.get(1).get("type").asText());
-            preparedStatement.setString(2, phone_node.get(1).get("number").asText());
-            preparedStatement.setInt(3, user_id);
-
             preparedStatement.executeUpdate();
+
+            ResultSet generatedKeys = preparedStatement.getGeneratedKeys();
+
+            if (generatedKeys.next()) {
+                return generatedKeys.getInt(1);
+            } else {
+                throw new SQLException("No generated keys returned.");
+            }
+
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
