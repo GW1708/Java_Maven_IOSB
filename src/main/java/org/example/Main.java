@@ -23,13 +23,16 @@ public class Main {
             String password = "Frosted-Barrette4-Revisable";
 
             Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
-            String sql = "INSERT INTO address (streetAddress, city, state, postalCode) VALUES (?, ?, ?, ?)";
+            String sql = "INSERT INTO phone (type, number, user_id) VALUES (?, ?, ?)";
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
 
-            preparedStatement.setString(1, rootNode.get("address").get("streetAddress").asText());
-            preparedStatement.setString(2, rootNode.get("address").get("city").asText());
-            preparedStatement.setString(3, rootNode.get("address").get("state").asText());
-            preparedStatement.setInt(4, rootNode.get("address").get("postalCode").asInt());
+            // preparedStatement.setString(1, rootNode.get("phoneNumber").get(0).get("type").asText());
+            // preparedStatement.setString(2, rootNode.get("phoneNumber").get(0).get("number").asText());
+            // preparedStatement.setString(3, "1");
+
+            preparedStatement.setString(1, rootNode.get("phoneNumber").get(1).get("type").asText());
+            preparedStatement.setString(2, rootNode.get("phoneNumber").get(1).get("number").asText());
+            preparedStatement.setString(3, "1");
 
             preparedStatement.executeUpdate();
 
