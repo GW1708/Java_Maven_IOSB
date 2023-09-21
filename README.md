@@ -7,11 +7,8 @@ Implement an integration test for the data retrieval.
 
 ## Result:
 - Created a mysql database `iosb_db` with the schema depicted below.
-- Stored data in the database using `jackson-databind` and `mysql-connector-java`
+- Stored data in the database using `jackson-databind` and `mysql-connector-java`.
+- Implemented data retrieval with user input.
+- Implemented integration tests for data retrieval using `junit-jupiter`.
 
 ![](https://github.com/GW1708/Java_Maven_IOSB/blob/master/graphics/iosb_db_schema.png)
-
-## ToDo:
-- Implement data retrieval
-- Implement an integration test for data retrieval
-
