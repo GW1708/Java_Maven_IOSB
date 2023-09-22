@@ -18,13 +18,13 @@ public class Main {
 
             Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
 
-            // write_data(connection, rootNode);  // This can be improved if there is more data to be written.
+            write_data(connection);  // This can be improved if there is more data to be written.
 
-            Scanner scanner = new Scanner(System.in);
-            System.out.print("Enter SQL query: ");
-            String sql_query = scanner.nextLine(); // Reading user input for the SQL query is dangerous.
-            print_data(connection, sql_query);
-            scanner.close();
+            /* Scanner scanner = new Scanner(System.in);
+               System.out.print("Enter SQL query: ");
+               String sql_query = scanner.nextLine(); // Reading user input for the SQL query is dangerous.
+               print_data(connection, sql_query);
+               scanner.close(); */
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -62,10 +62,16 @@ public class Main {
             // Check if address already exists. If not, write address data. Else, retrieve address_id.
             int address_id = write_address_data(connection, rootNode.get("address"));
             System.out.println("Writing address data successful. Primary Key: " + address_id);
+
             int user_id = write_user_data(connection, rootNode, address_id);
             System.out.println("Writing user data successful. Primary Key: " + user_id);
-            int phone_id = write_phone_data(connection, rootNode.get("phoneNumber"), user_id);
-            System.out.println("Writing phone data successful. Primary Key: " + phone_id);
+
+            JsonNode phone_node = rootNode.get("phoneNumber");
+            int phone_entries = phone_node.size();
+            for (int i = 0; i < phone_entries; i++) {
+                int phone_id = write_phone_data(connection, phone_node.get(i), user_id);
+                System.out.println("Writing phone data successful. Primary Key: " + phone_id);
+            }
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -75,7 +81,7 @@ public class Main {
     public static int write_address_data(Connection connection, JsonNode address_node) {
         try {
             String sql = "INSERT INTO address (streetAddress, city, state, postalCode) VALUES (?, ?, ?, ?)";
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            PreparedStatement preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
             String streetAddress = address_node.get("streetAddress").asText();
             String city = address_node.get("city").asText();
@@ -105,11 +111,11 @@ public class Main {
     private static int write_user_data(Connection connection, JsonNode rootNode, int address_id ) {
         try {
             String sql = "INSERT INTO user (firstName, lastName, age, address_id) VALUES (?, ?, ?, ?)";
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            PreparedStatement preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
             preparedStatement.setString(1, rootNode.get("firstName").asText());
             preparedStatement.setString(2, rootNode.get("lastName").asText());
-            preparedStatement.setString(2, rootNode.get("lastName").asText());
+            preparedStatement.setString(3, rootNode.get("age").asText());
             preparedStatement.setInt(4, address_id);
 
             preparedStatement.executeUpdate();
@@ -130,15 +136,13 @@ public class Main {
     private static int write_phone_data(Connection connection, JsonNode phone_node, int user_id) {
         try {
             String sql = "INSERT INTO phone (type, number, user_id) VALUES (?, ?, ?)";
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            PreparedStatement preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
-            // This can be improved to loop over all existing phone entries.
-            preparedStatement.setString(1, phone_node.get(0).get("type").asText());
-            preparedStatement.setString(2, phone_node.get(0).get("number").asText());
+            preparedStatement.setString(1, phone_node.get("type").asText());
+            preparedStatement.setString(2, phone_node.get("number").asText());
             preparedStatement.setInt(3, user_id);
 
             preparedStatement.executeUpdate();
-
             ResultSet generatedKeys = preparedStatement.getGeneratedKeys();
 
             if (generatedKeys.next()) {
